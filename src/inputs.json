@@ -1,0 +1,96 @@
+{
+  "input_workstream": {
+    "type": "input.dropdown",
+    "title": "Workstream",
+    "dataSources": {
+      "primary": "ds_workstreams"
+    },
+    "options": {
+      "token": "workstream",
+      "defaultValue": "__all__",
+      "items": "> frame(label, value) | prepend(formattedStatics) | objects()"
+    },
+    "context": {
+      "formattedConfig": {
+        "number": {
+          "prefix": ""
+        }
+      },
+      "statics": [
+        [
+          "All workstreams"
+        ],
+        [
+          "__all__"
+        ]
+      ],
+      "formattedStatics": "> statics | formatByType(formattedConfig)",
+      "label": "> primary | seriesByName('workstream') | renameSeries('label') | formatByType(formattedConfig)",
+      "value": "> primary | seriesByName('workstream') | renameSeries('value') | formatByType(formattedConfig)"
+    }
+  },
+  "input_status": {
+    "type": "input.dropdown",
+    "title": "Status",
+    "options": {
+      "token": "status",
+      "defaultValue": "__all__",
+      "items": [
+        {
+          "label": "All statuses",
+          "value": "__all__"
+        },
+        {
+          "label": "Planned",
+          "value": "Planned"
+        },
+        {
+          "label": "In progress",
+          "value": "In progress"
+        },
+        {
+          "label": "At risk",
+          "value": "At risk"
+        },
+        {
+          "label": "Blocked",
+          "value": "Blocked"
+        },
+        {
+          "label": "Complete",
+          "value": "Complete"
+        }
+      ]
+    }
+  },
+  "input_owner": {
+    "type": "input.dropdown",
+    "title": "Owner",
+    "dataSources": {
+      "primary": "ds_owners"
+    },
+    "options": {
+      "token": "owner",
+      "defaultValue": "__all__",
+      "items": "> frame(label, value) | prepend(formattedStatics) | objects()"
+    },
+    "context": {
+      "formattedConfig": {
+        "number": {
+          "prefix": ""
+        }
+      },
+      "statics": [
+        [
+          "All owners"
+        ],
+        [
+          "__all__"
+        ]
+      ],
+      "formattedStatics": "> statics | formatByType(formattedConfig)",
+      "label": "> primary | seriesByName('owner') | renameSeries('label') | formatByType(formattedConfig)",
+      "value": "> primary | seriesByName('owner') | renameSeries('value') | formatByType(formattedConfig)"
+    }
+  }
+}

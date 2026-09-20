@@ -1,0 +1,13 @@
+| inputlookup max=1001 cdp_roadmap.csv
+| eventstats count AS id_count BY id
+| eval start_epoch=strptime(start_date,"%Y-%m-%d"), end_epoch=strptime(end_date,"%Y-%m-%d")
+| eval validation=case(
+    len(trim(coalesce(id,"")))=0 OR len(trim(coalesce(workstream,"")))=0 OR len(trim(coalesce(milestone,"")))=0 OR len(trim(coalesce(owner,"")))=0, "Missing required text",
+    id_count>1, "Duplicate ID",
+    len(coalesce(start_date,""))!=10 OR len(coalesce(end_date,""))!=10 OR NOT match(coalesce(start_date,""),"^[0-9]{4}-[0-9]{2}-[0-9]{2}") OR NOT match(coalesce(end_date,""),"^[0-9]{4}-[0-9]{2}-[0-9]{2}"), "Use YYYY-MM-DD dates",
+    isnull(start_epoch) OR isnull(end_epoch) OR strftime(start_epoch,"%Y-%m-%d")!=start_date OR strftime(end_epoch,"%Y-%m-%d")!=end_date, "Invalid date",
+    end_epoch<start_epoch, "End precedes start",
+    NOT in(coalesce(status,""),"Planned","In progress","At risk","Blocked","Complete"), "Unsupported status",
+    true(), "OK")
+| eval timeline_label=trim(coalesce(timeline_label,"")), duration=(end_epoch-start_epoch)*1000, item=id." | ".if(len(timeline_label)>0,timeline_label,milestone)
+| table id project workstream milestone timeline_label start_date end_date status owner dependency_ids acceptance_criteria start_epoch duration item validation

@@ -1,0 +1,6 @@
+/* Scoped page host; application styling is isolated in its shadow root. */
+.dashboard-body { padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: none !important; background: #171d21; }
+#cdp_schedule_panel { margin: 0; }
+#cdp_schedule_panel .panel-body { padding: 0 !important; background: #171d21; }
+#cdp-schedule-root { display: block; min-height: calc(100vh - 48px); width: 100%; color: #f2f4f5; background: #171d21; }
+.dashboard-row .dashboard-cell { padding: 0; }

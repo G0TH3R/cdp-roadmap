@@ -1,0 +1,19 @@
+{
+  "name": "cdp-schedule",
+  "version": "0.4.1",
+  "private": true,
+  "description": "CDP Program Management React UI for a scoped Splunk lookup",
+  "scripts": {
+    "build": "python3 tools/build_release.py",
+    "test": "node --test tests/test_adapter.cjs src/web/*.test.mjs && npm run build && python3 -m unittest discover -s tests -v",
+    "test:adapter": "node --test tests/test_adapter.cjs",
+    "verify": "npm test && npm run build"
+  },
+  "dependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

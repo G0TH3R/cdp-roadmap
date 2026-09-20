@@ -1,0 +1,9 @@
+id,project,workstream,milestone,timeline_label,start_date,end_date,status,owner,dependency_ids,acceptance_criteria
+CDP-001,Release 1.0,Planning,Scope and success criteria,Scope & Success,2026-10-01,2026-10-16,In progress,Program lead,,Scope and measurable success criteria agreed
+CDP-002,Release 1.0,Governance,Data ownership and acceptance criteria,Data Ownership,2026-10-12,2026-11-06,Planned,Governance lead,CDP-001,Owners and acceptance criteria documented
+CDP-003,Release 1.0,Data onboarding,Pilot source onboarding,Source Onboarding,2026-11-02,2026-12-04,Planned,Data engineering,CDP-002,Pilot sources available for validation
+CDP-004,Release 1.0,Validation,Pilot data quality review,Data Quality,2026-11-23,2026-12-11,Planned,Quality lead,CDP-003,Quality review completed and findings recorded
+CDP-005,Release 1.0,Operations,Support readiness and handover,Support Handover,2026-12-07,2026-12-18,Planned,Operations lead,CDP-003,Support ownership and handover agreed
+CDP-006,Release 1.0,Decision,Pilot go-live decision,Go-Live Decision,2026-12-18,2026-12-18,Planned,Program sponsor,CDP-004;CDP-005,Readiness decision recorded
+CDP-007,Release 1.1,Architecture,Architecture review,Architecture Review,2027-01-04,2027-01-08,Complete,Solution architect,,Architecture decision record approved
+CDP-008,Release 1.1,Readiness,Pilot readiness review,Pilot Readiness,2027-01-11,2027-01-15,In progress,Program lead,CDP-007,Pilot readiness checklist accepted

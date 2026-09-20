@@ -1,0 +1,11 @@
+[]
+access = read : [ admin ], write : [ admin ]
+export = none
+
+[views]
+access = read : [ admin ], write : [ admin ]
+export = none
+
+[lookups/cdp_roadmap.csv]
+access = read : [ admin ], write : [ admin ]
+export = none

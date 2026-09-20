@@ -1,0 +1,15 @@
+{
+  "x": "> primary | seriesByName('start_iso')",
+  "y": "> primary | seriesByName('item')",
+  "duration": "> primary | seriesByName('duration')",
+  "category": "> primary | seriesByName('status')",
+  "yAxisLabelWidth": 350,
+  "additionalTooltipFields": [
+    "owner",
+    "workstream",
+    "acceptance_criteria"
+  ],
+  "legendDisplay": "right",
+  "resultLimit": 1000,
+  "dataColors": "> primary | seriesByName('status') | matchValue(statusColors)"
+}

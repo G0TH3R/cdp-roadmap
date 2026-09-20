@@ -1,0 +1,8 @@
+<dashboard version="1.1" theme="dark" hideTitle="true" hideEdit="true" hideAppBar="true" script="cdp-schedule-0-4-1.js" stylesheet="cdp-schedule-0-4-1.css">
+  <label>CDP Program Management</label>
+  <description>Projects, activities, ownership, and delivery status.</description>
+  <row><panel id="cdp_schedule_panel"><html>
+    <div id="cdp-schedule-root" aria-label="CDP Program Management">Loading…</div>
+    <noscript>JavaScript unavailable. <a href="studio_roadmap">Projects Scheulde</a></noscript>
+  </html></panel></row>
+</dashboard>

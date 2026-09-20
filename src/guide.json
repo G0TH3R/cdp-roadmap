@@ -1,0 +1,47 @@
+{
+  "title": "CDP Schedule · Editing guide",
+  "description": "Maintain entries, interpret dates, and manage access.",
+  "inputs": {},
+  "visualizations": {
+    "viz_guide": {
+      "type": "splunk.markdown",
+      "options": {
+        "markdown": "# CDP Schedule · Maintain your roadmap\n\n**Author: G0TH3R · Illustrative sample data—not an approved platform design or delivery commitment.**\n\n## Edit entries\n\n1. Open [Edit roadmap entries](/en-US/app/lookup_editor/lookup_edit?namespace=cdp_roadmap&lookup=cdp_roadmap.csv&type=csv&owner=nobody).\n2. Change dates, status, owner, deliverables, dependencies or acceptance criteria in the grid. Add a row for a new deliverable.\n3. Select **Save**, then return to the [roadmap](/en-US/app/cdp_roadmap/roadmap) and reload it.\n\nUse the app's **Edit entries** navigation item for data changes. Dashboard Studio's **Edit** action changes the dashboard design and SPL, not the lookup records.\n\n## Entry rules\n\n- **id:** unique and stable, such as `CDP-007`.\n- **workstream, milestone, owner:** required text. Do not use the reserved filter value `__all__`.\n- **start_date / end_date:** `YYYY-MM-DD`. End must not precede start.\n- **status:** `Planned`, `In progress`, `At risk`, `Blocked`, or `Complete`.\n- **dependency_ids:** optional semicolon-separated IDs, for example `CDP-004;CDP-005`. Informational only—dependencies do not reschedule work.\n- **acceptance_criteria:** optional definition of completion.\n\nA bar ends at midnight at the **start** of its end date. To show work through December 18, use December 19 as its end boundary. Equal start/end dates create a milestone point. Date parsing follows the search user's Splunk timezone.\n\n## Reading the dashboard\n\nUse **Overview** for summary cards, the entry register and lookup health. Open the separate **Roadmap** tab for the full-width timeline. Filter by workstream, status and owner; the timeline and entry register share those filters across tabs. The lookup-health panel checks all loaded entries before filters; invalid entries remain in the register but are omitted from the timeline. Reset filters to find invalid rows.\n\nThe supported limit is **1,000 entries**. A bounded 1,001-row read detects overflow and displays a warning; it does not validate the rest of an oversized lookup. Split larger roadmaps before operational use.\n\n## Ownership and safety\n\nThis app owns its own `cdp_roadmap.csv` in the `cdp_roadmap` namespace. The earlier Search & Reporting example is a separate snapshot; editing it does not update this app.\n\nAccess is initially limited to the **admin** role. Expand viewer/editor access deliberately before sharing. Export a backup before bulk edits. The dashboard reads only a lookup: it does not scan security events, write records, or run scheduled searches.\n\nDashboard Studio supplies the native timeline. The original Timeline gallery remains unchanged; the standalone app does not require its Classic visualization.\n"
+      }
+    }
+  },
+  "dataSources": {},
+  "layout": {
+    "globalInputs": [],
+    "layoutDefinitions": {
+      "layout_main": {
+        "type": "absolute",
+        "options": {
+          "display": "auto-scale",
+          "width": 1440,
+          "height": 1290
+        },
+        "structure": [
+          {
+            "item": "viz_guide",
+            "type": "block",
+            "position": {
+              "x": 24,
+              "y": 16,
+              "w": 1392,
+              "h": 1260
+            }
+          }
+        ]
+      }
+    },
+    "tabs": {
+      "items": [
+        {
+          "label": "Overview",
+          "layoutId": "layout_main"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,5 @@
+<nav search_view="search">
+  <view name="roadmap" default="true"/>
+
+  <a href="/en-US/app/lookup_editor/lookup_edit?namespace=cdp_roadmap&amp;lookup=cdp_roadmap.csv&amp;type=csv&amp;owner=nobody">Edit entries</a>
+</nav>

@@ -1,0 +1,26 @@
+node_modules/
+__pycache__/
+*.py[cod]
+.DS_Store
+.venv/
+.env
+.env.*
+local/
+var/
+
+# Generated build outputs; the release asset is uploaded separately.
+build/
+dist/
+
+# Historical generated bundles are not source-of-truth.
+appserver/static/cdp-schedule-*.js
+appserver/static/cdp-schedule-*.css
+!appserver/static/cdp-schedule-0-4-1.js
+!appserver/static/cdp-schedule-0-4-1.css
+
+# Local smoke-test artifacts.
+browser-smoke*.png
+browser-smoke*.json
+*deployment-receipt*
+*lookup-migration-receipt*
+*.bak
