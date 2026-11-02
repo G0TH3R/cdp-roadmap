@@ -13,7 +13,7 @@
 2. Inspect the archive and confirm the single root directory is `cdp_roadmap/`.
 3. Install the archive through the supported app-management mechanism.
 4. Confirm `default/app.conf` reports app ID `cdp_roadmap` and the expected version.
-5. Review `metadata/default.meta`. The packaged ACL is admin-only and `export = none`.
+5. Review `metadata/default.meta`: all-role app/view reads and CSV reads/writes, admin-only definition writes, `export = none`. Restrict these defaults where policy requires.
 6. Open `/en-US/app/cdp_roadmap/roadmap` as an authorized user.
 7. Confirm the Overview and Roadmap tabs, theme control, filters, details, Today marker behavior, and Lookup Editor link.
 8. Confirm the search is app-scoped and returns no more than 1,001 transport rows.
@@ -30,11 +30,15 @@ Do not overwrite a live lookup with packaged seed data. Activate app/view discov
 
 ## Access control
 
-The default metadata grants read and write only to `admin`. If broader use is required, apply least-privilege app/view and lookup ACLs through supported Splunk administration. Treat read and write separately: users who can view the timeline do not necessarily need permission to edit the lookup.
+The default metadata allows all-role app/view reads and lookup reads/writes, while definitions remain admin-writable. Apply least privilege through supported Splunk administration and inspect local overrides. App access and Lookup Editor capabilities still apply; wildcard lookup permissions alone do not grant a user every capability. Verify both intended viewers and editors rather than assuming administrator success establishes their access.
 
 ## Data maintenance
 
-Users edit through Lookup Editor, then select Reload in the app. Keep the header and date/status formats documented in `lookup-schema.md`. Export a backup before bulk changes. The app never performs `outputlookup` and has no custom write endpoint.
+Users edit through Lookup Editor, then select Reload in the app. Keep the header and date/status/category formats documented in `lookup-schema.md`. New installs include eight dummy rows only. Export a backup before bulk changes. Create new column headers before import if your editor ignores extra CSV columns, inspect for trailing blank records, and verify the stored file after Save. The app never performs `outputlookup` and has no custom write endpoint. Missing/inaccessible Lookup Editor does not block viewing.
+
+## Search-head clusters
+
+Deploy through the SHC deployer, not a standalone file-swap script. Review the packaged `deployer_lookups_push_mode = always_preserve`, supported lookup-update replication, target IT/security policy and app overrides. Verify an approved save on one member is visible through another. CSV does not inherently require KV Store; this repository does not certify an SHC deployment.
 
 ## Verification
 

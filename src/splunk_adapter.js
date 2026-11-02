@@ -1,4 +1,4 @@
-/* Read-only SplunkJS search boundary. No lookup write or credential handling. */
+/* Read-only SplunkJS CSV adapter and optional Lookup Editor discovery. */
 (function (root, factory) {
     if (typeof module === 'object' && module.exports) module.exports = factory();
     else root.CDPScheduleAdapter = factory();
@@ -67,5 +67,16 @@
         loadData.cancel = function () { if (active) active.cancel(); };
         return loadData;
     }
-    return {createLoadData: createLoadData};
+    function checkLookupEditor($, util) {
+        return new Promise(function (resolve) {
+            $.ajax({url: util.make_url('/splunkd/__raw/services/apps/local/lookup_editor'),
+                type: 'GET', data: {output_mode: 'json'}, dataType: 'json', timeout: 8000, cache: false
+            }).done(function (data) {
+                const entry = data && Array.isArray(data.entry) && data.entry[0];
+                resolve(Boolean(entry && entry.name === 'lookup_editor' && entry.content &&
+                    [false, 0, '0'].includes(entry.content.disabled)));
+            }).fail(function () { resolve(false); });
+        });
+    }
+    return {createLoadData: createLoadData, checkLookupEditor: checkLookupEditor};
 }));

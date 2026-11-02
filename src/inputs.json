@@ -1,4 +1,21 @@
 {
+  "input_project_category": {
+    "type": "input.dropdown",
+    "title": "Project Category",
+    "options": {
+      "token": "project_category",
+      "defaultValue": "__all__",
+      "items": [
+        {"label": "All categories", "value": "__all__"},
+        {"label": "Observability", "value": "Observability"},
+        {"label": "Security", "value": "Security"},
+        {"label": "Infrastructure", "value": "Infrastructure"},
+        {"label": "Automation & Analytics", "value": "Automation & Analytics"},
+        {"label": "OT/ICS", "value": "OT/ICS"},
+        {"label": "Uncategorized", "value": ""}
+      ]
+    }
+  },
   "input_workstream": {
     "type": "input.dropdown",
     "title": "Workstream",

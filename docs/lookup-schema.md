@@ -1,35 +1,42 @@
 # Lookup schema
 
-`lookups/cdp_roadmap.csv` contains eight illustrative seed rows. Replace or edit them only after reviewing the target environment's access and data-classification requirements.
+`lookups/cdp_roadmap.csv` contains eight fictional `DEMO-*` activities. The public repository/package never includes operational roadmap data. Back up live data before replacing examples or importing changes.
 
 | Column | Required | Meaning |
 |---|---:|---|
-| `id` | yes | Unique, stable activity identifier, for example `CDP-001`. |
-| `project` | no | Project lane. Blank values appear under **Unassigned project**. |
-| `workstream` | yes | Filterable workstream label. |
-| `milestone` | yes | Full activity or milestone name. |
-| `timeline_label` | no | Short label used when a bar has enough width. |
+| `id` | yes | Unique stable activity identifier, such as `DEMO-001`. |
+| `project` | no | Project lane; blank means Unassigned project. |
+| `project_category` | no | Exact canonical category; blank/missing means Uncategorized. |
+| `workstream` | yes | Workstream within delivery; distinct from category. |
+| `milestone` | yes | Full activity/milestone text. |
+| `timeline_label` | no | Optional short bar label; blank falls back to milestone. |
 | `start_date` | yes | Calendar date in `YYYY-MM-DD`. |
-| `end_date` | yes | Calendar date in `YYYY-MM-DD`; must not precede `start_date`. |
-| `status` | yes | One of `Planned`, `In progress`, `At risk`, `Blocked`, or `Complete`. |
-| `owner` | yes | Display label for the responsible role or team. Avoid personal or sensitive identifiers unless approved. |
-| `dependency_ids` | no | Semicolon-delimited IDs, for example `CDP-002;CDP-003`. Informational only. |
+| `end_date` | yes | End-exclusive calendar date; cannot precede start. |
+| `status` | yes | Planned, In progress, At risk, Blocked or Complete. |
+| `owner` | yes | Approved role/team label; avoid unapproved personal data. |
+| `dependency_ids` | no | Semicolon-delimited activity IDs; informational only. |
 | `acceptance_criteria` | no | Plain-text completion criteria. |
 
-The reserved filter value `__all__` must not be used as a real workstream, status, or owner.
+## Project Category
+
+The fixed categories are **Observability**, **Security**, **Infrastructure**, **Automation & Analytics**, and **OT/ICS**. Use the exact spelling/case. Every activity of a named project must carry the same category, including blank values. A partial category update creates a visible validation issue; update all relevant rows together. Unassigned-project rows are not forced into one common category.
+
+The category selector always offers all five values. Legacy data without the column stays valid as Uncategorized. Do not use the reserved filter value `__all__` as a real category, workstream, status or owner.
 
 ## Example
 
 ```csv
-id,project,workstream,milestone,timeline_label,start_date,end_date,status,owner,dependency_ids,acceptance_criteria
-CDP-101,Example release,Planning,Confirm delivery scope,Scope,2027-02-01,2027-02-05,Planned,Program lead,,Scope is reviewed and approved
-CDP-102,Example release,Delivery,Complete pilot,Pilot,2027-02-08,2027-02-19,In progress,Delivery team,CDP-101,Pilot acceptance checks pass
+id,project,project_category,workstream,milestone,timeline_label,start_date,end_date,status,owner,dependency_ids,acceptance_criteria
+DEMO-101,Example Review,Security,Discovery,Review dummy requirements,Dummy Scope,2027-02-01,2027-02-05,Planned,Example Owner A,,Illustrative requirements reviewed
+DEMO-102,Example Review,Security,Validation,Accept example results,Dummy Acceptance,2027-02-05,2027-02-05,Planned,Example Owner A,DEMO-101,Example acceptance recorded
 ```
 
-## Date semantics
+## Date semantics and bounds
 
-Dates are parsed strictly as calendar dates and displayed in UTC to avoid daylight-saving drift. Bars end at the start of `end_date`; when start and end are equal, the activity is rendered as a milestone point.
+The React canvas strictly parses calendar dates and displays them in UTC to avoid daylight-saving drift. A bar ends at the start of `end_date`; equal dates create a milestone. The Today marker follows the browser's local calendar date. Studio's SPL date parsing follows the search context timezone.
 
-## Validation and bounds
+At most 1,001 rows are read. The first 1,000 are rendered, with the extra row detecting overflow. Missing text/IDs, duplicate IDs, invalid/reversed dates, unsupported statuses/categories and conflicting project categories require review. Invalid records remain in Overview but do not enter the timeline. The app does not validate unseen rows beyond the cap or enforce dependency schedules.
 
-The search reads at most 1,001 records. The UI renders the first 1,000 and uses the extra row to report capacity overflow. Missing IDs, duplicate IDs, invalid/reversed dates, missing required text, and unsupported statuses are reported. Invalid rows remain in the Overview register but do not enter the timeline.
+## Lookup Editor imports
+
+Use the same-origin app-shared CSV, not a similarly named user/private lookup. Create any new column before importing: installed Lookup Editor versions may ignore unknown import columns. Compare headers and rows before Save, remove unintended blank trailing records, keep a backup, then return and Reload. On SHC, verify the supported replication behavior on another member.

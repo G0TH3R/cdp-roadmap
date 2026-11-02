@@ -15,8 +15,8 @@ dist/
 # Historical generated bundles are not source-of-truth.
 appserver/static/cdp-schedule-*.js
 appserver/static/cdp-schedule-*.css
-!appserver/static/cdp-schedule-0-4-1.js
-!appserver/static/cdp-schedule-0-4-1.css
+!appserver/static/cdp-schedule-0-7-1.js
+!appserver/static/cdp-schedule-0-7-1.css
 
 # Local smoke-test artifacts.
 browser-smoke*.png
@@ -24,3 +24,11 @@ browser-smoke*.json
 *deployment-receipt*
 *lookup-migration-receipt*
 *.bak
+
+# Never publish operational planning, local exports, or deployment evidence.
+planning/
+sketches/
+public-repo/
+*portfolio-save-receipt*
+*live-baseline*
+*live-after-*

@@ -61,8 +61,15 @@ export function barPosition(row, axis) {
   return {left: (row.start - axis.min) / (axis.max - axis.min) * 100, width: (row.end - row.start) / (axis.max - axis.min) * 100};
 }
 export function filterRows(rows, filters) {
-  return rows.filter(row => (!filters.project || JSON.stringify(row.project) === filters.project) && ['workstream', 'status', 'owner'].every(key => !filters[key] || row[key] === filters[key]))
+  const query = (filters.search || '').trim().toLocaleLowerCase();
+  return rows.filter(row => (!filters.project || JSON.stringify(row.project) === filters.project) && (!filters.project_category || JSON.stringify(row.project_category) === filters.project_category) && ['workstream', 'status', 'owner'].every(key => !filters[key] || row[key] === filters[key]) &&
+      (!query || ['id', 'project', 'project_category', 'milestone', 'timeline_label', 'workstream', 'owner', 'status'].some(key => row[key]?.toLocaleLowerCase().includes(query))))
     .sort((a, b) => (a.start ?? Infinity) - (b.start ?? Infinity) || a.id.localeCompare(b.id) || a.key.localeCompare(b.key));
+}
+
+export function timelineWidth(axis, scale = 'fit') {
+  if (!axis || scale === 'fit') return 640;
+  return Math.min(16000, Math.max(740, 220 + (scale === 'months' ? axis.ticks.length * 180 : axis.weeks.length * 58)));
 }
 
 /** One project lane, with non-overlapping visual tracks for its activities. */
@@ -86,7 +93,8 @@ export function projectLanes(rows, axis) {
       ends[track] = end;
       return {row, ...position, track};
     });
-    return {key: JSON.stringify(project), project, label: project || 'Unassigned project', activities: placed, trackCount: ends.length};
+    const categories = new Set(activities.map(row => row.project_category));
+    return {key: JSON.stringify(project), project, category: categories.size > 1 ? 'Mixed categories' : activities[0].project_category, label: project || 'Unassigned project', activities: placed, trackCount: ends.length};
   });
 }
 export function pageFromLocation({hash, search}) {
@@ -105,9 +113,10 @@ export function safeEditorUrl(value, base) {
 }
 
 export const LIMIT = 1000;
+export const PROJECT_CATEGORIES = ['Observability', 'Security', 'Infrastructure', 'Automation & Analytics', 'OT/ICS'];
 export const STATUSES = ['Planned', 'In progress', 'At risk', 'Blocked', 'Complete'];
 export const STATUS_CLASS = {Planned: 'planned', 'In progress': 'progress', 'At risk': 'risk', Blocked: 'blocked', Complete: 'complete'};
-const FIELDS = ['id', 'project', 'workstream', 'milestone', 'timeline_label', 'start_date', 'end_date', 'status', 'owner', 'dependency_ids', 'acceptance_criteria', 'validation'];
+const FIELDS = ['id', 'project', 'project_category', 'workstream', 'milestone', 'timeline_label', 'start_date', 'end_date', 'status', 'owner', 'dependency_ids', 'acceptance_criteria', 'validation'];
 const text = value => Array.isArray(value) ? value.map(text).join('; ') : typeof value === 'string' || typeof value === 'number' ? String(value) : '';
 
 export function prepareData(input) {
@@ -116,9 +125,17 @@ export function prepareData(input) {
   const ids = new Map();
   // Inspect only the bounded read; include the overflow sentinel in duplicate detection.
   input.slice(0, LIMIT + 1).forEach(row => { const id = text(row?.id); ids.set(id, (ids.get(id) || 0) + 1); });
+  const categories = new Map();
+  input.slice(0, LIMIT + 1).forEach(row => {
+    const project = text(row?.project).trim();
+    if (!project) return;
+    if (!categories.has(project)) categories.set(project, new Set());
+    categories.get(project).add(text(row?.project_category).trim());
+  });
   const rows = bounded.map((raw, index) => {
     const row = Object.fromEntries(FIELDS.map(field => [field, text(raw?.[field])]));
     row.project = row.project.trim();
+    row.project_category = row.project_category.trim();
     row.timeline_label = row.timeline_label.trim();
     const start = parseDate(row.start_date), end = parseDate(row.end_date);
     const issues = [];
@@ -128,6 +145,8 @@ export function prepareData(input) {
     if (start === null || end === null) issues.push('Invalid date');
     else if (end < start) issues.push('End precedes start');
     if (!STATUSES.includes(row.status)) issues.push('Unsupported status');
+    if (row.project_category && !PROJECT_CATEGORIES.includes(row.project_category)) issues.push('Unsupported project category');
+    if (categories.get(row.project)?.size > 1) issues.push('Conflicting project categories');
     return {...row, key: `${index}:${row.id}`, start, end, issues: [...new Set(issues)], timelineValid: issues.length === 0, point: start !== null && start === end && issues.length === 0};
   });
   return {rows, overflow: input.length > LIMIT, invalidCount: rows.filter(row => !row.timelineValid).length, unassignedCount: rows.filter(row => !row.project).length};

@@ -18,7 +18,7 @@ MOCK = r'''
 let mode='fixture', dispatched=0;
 const statuses=['Planned','In progress','At risk','Blocked','Complete'];
 const now=new Date(), date=(offset,day=1)=>new Date(Date.UTC(now.getFullYear(),now.getMonth()+offset,day)).toISOString().slice(0,10);
-const base={project:'Project Alpha',workstream:'Test work',owner:'Test owner',start_date:date(0),end_date:date(2),validation:'OK',dependency_ids:'',acceptance_criteria:'Synthetic browser test only'};
+const base={project:'Project Alpha',project_category:'Security',workstream:'Test work',owner:'Test owner',start_date:date(0),end_date:date(2),validation:'OK',dependency_ids:'',acceptance_criteria:'Synthetic browser test only'};
 const fixture=statuses.map((status,i)=>({...base,project:i<3?'Project Alpha':'Project Beta',id:'TEST-'+i,milestone:i===0?'<img src=x onerror=alert(1)>':'Test activity '+i,timeline_label:i===0?'Short & safe':'',status}));
 fixture.push({...base,id:'POINT',milestone:'Test decision',status:'Planned',start_date:date(1),end_date:date(1)});
 fixture.push({...base,id:'BAD',milestone:'Invalid test',status:'Planned',end_date:'',validation:'Invalid date'});
@@ -29,14 +29,19 @@ class Manager extends E {
  startSearch(){dispatched++;if(this.options.app!=='cdp_roadmap'||this.options.earliest_time!=='-24h'||this.options.latest_time!=='now'||!this.options.search.startsWith('| inputlookup max=1001 cdp_roadmap.csv'))throw Error('Search boundary mismatch');setTimeout(()=>{if(mode==='error'){this.emit('search:failed');return;}let rows=mode==='empty'?[]:mode==='overflow'?Array.from({length:1001},(_,i)=>({...base,id:'LIMIT-'+i,milestone:'Test '+i,status:'Planned'})):fixture;this.payload={results:rows};this.emit('search:done',{content:{resultCount:rows.length}});this.results.emit('data');},40);}
  dispose(){} cancel(){}
 }
-function require(dependencies,callback){callback(Manager,{make_url:path=>path});}
+const jquery={ajax(options){if(options.type!=='GET'||!options.url.endsWith('/services/apps/local/lookup_editor'))throw Error('Unexpected discovery request');const callbacks={};setTimeout(()=>{
+ callbacks.done?.({entry:[{name:'lookup_editor',content:{disabled:false}}]});
+},40);return {done(fn){callbacks.done=fn;return this;},fail(fn){callbacks.fail=fn;return this;}};}};
+function require(dependencies,callback){callback(Manager,{make_url:path=>path},jquery);}
 '''
 TEST = r'''
-const checks=[];const pause=()=>new Promise(r=>setTimeout(r,120));
+// Allow the 180ms button/background transitions to settle before contrast checks.
+const checks=[];const pause=()=>new Promise(r=>setTimeout(r,240));
 function ok(value,label){if(!value)throw Error(label);checks.push(label);}
 function luminance(rgb){const c=rgb.match(/[\d.]+/g).slice(0,3).map(n=>Number(n)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);return c[0]*.2126+c[1]*.7152+c[2]*.0722;}
 function contrast(element){const style=getComputedStyle(element),a=luminance(style.color),b=luminance(style.backgroundColor);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);}
 function colorContrast(a,b){const x=luminance(a),y=luminance(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);}
+function settleStatusTransitions(s){for(const element of s.querySelectorAll('.bar')){getComputedStyle(element).backgroundColor;for(const animation of element.getAnimations())animation.finish();}}
 function gridlineHierarchy(s,label){
  const background=getComputedStyle(s.querySelector('#roadmap .panel')).backgroundColor;
  const week=getComputedStyle(s.querySelector('.week-gridline')).borderLeftColor;
@@ -54,17 +59,25 @@ async function run(){
  const text=()=>s.textContent;
  const button=name=>[...s.querySelectorAll('button')].find(x=>x.textContent.trim()===name);
  ok(s.querySelector('.brand strong').textContent==='CDP Program Management','requested app name');
- ok(s.querySelector('h1').textContent==='Projects Scheulde','exact requested heading');
+ ok(s.querySelector('h1').textContent==='Project Schedule','corrected heading');
  ok(!button('Guide')&&!s.querySelector('[aria-label="Open editing guide"]'),'no guide controls');
  ok(!s.querySelector('.preview-strip')&&!s.querySelector('.subtitle'),'no instructional chrome');
  ok(!/Click any activity|Maintain entries|Add the project column/.test(text()),'no instructional prose');
  ok(s.querySelectorAll('.timeline-row').length===2,'two grouped project lanes');
  ok(s.querySelectorAll('.bar').length===6,'six valid activities including milestone');
+ const category=s.querySelector('[aria-label="Filter project category"]');
+ ok(['Observability','Security','Infrastructure','Automation & Analytics','OT/ICS'].every(value=>[...category.options].some(option=>option.textContent===value)),'all five fixed project categories available');
+ category.value=JSON.stringify('OT/ICS');category.dispatchEvent(new Event('change',{bubbles:true}));await pause();
+ ok(s.querySelectorAll('.bar').length===0&&text().includes('No matching entries'),'empty category shows explicit empty state');
+ category.value=JSON.stringify('Security');category.dispatchEvent(new Event('change',{bubbles:true}));await pause();
+ ok(s.querySelectorAll('.bar').length===6&&[...s.querySelectorAll('.project-label .project-category')].every(e=>e.textContent==='Security'),'category filters project lanes and labels');
+ button('Overview').click();await pause();ok(category.value===JSON.stringify('Security')&&s.querySelectorAll('.entry-link').length===7,'category persists into register including invalid records');
+ button('Reset').click();await pause();button('Roadmap').click();await pause();ok(category.value===''&&dispatched===1,'category reset and navigation do not dispatch searches');
  ok(s.querySelectorAll('.week').length>4&&s.querySelector('.week').getAttribute('aria-label').includes('FY'),'federal fiscal week axis');
  ok(s.querySelector('.today-marker')&&s.querySelector('.today-marker').getAttribute('aria-label').startsWith('Today:'),'dynamic accessible Today marker');
  ok(s.querySelector('.bar span').textContent==='Short & safe'&&!s.querySelector('.bar span').textContent.includes('Planned'),'short bar label omits status');
  ok(!s.querySelector('footer')&&!s.querySelector('.timeline-foot')&&!/automatic dependency scheduler|Read-only view of cdp_roadmap.csv|Designed for clarity/.test(text()),'timeline ends without footer copy');
- ok(s.querySelector('.content').getBoundingClientRect().width>=innerWidth-(innerWidth<=760?24:2),'full viewport workspace width');
+ ok(s.querySelector('.content').getBoundingClientRect().width>=document.documentElement.clientWidth-2,'full available viewport workspace width');
  ok(getComputedStyle(s.querySelector('a.primary')).backgroundColor==='rgb(92, 192, 92)','Splunk green primary action');
  const alpha=s.querySelector('.project-row');
  const boxes=[...alpha.querySelectorAll('.bar:not(.milestone)')].map(el=>el.getBoundingClientRect());
@@ -80,17 +93,36 @@ async function run(){
  const project=s.querySelector('[aria-label="Filter project"]');project.value=JSON.stringify('Project Beta');project.dispatchEvent(new Event('change',{bubbles:true}));await pause();
  ok(s.querySelectorAll('.project-row').length===1&&s.querySelectorAll('.bar').length===2,'project filter groups two activities');
  button('Reset').click();await pause();
- ok(dispatched===1,'one bounded initial search');
+ const search=s.querySelector('[aria-label="Search activities"]');
+ const type=value=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(search,value);search.dispatchEvent(new Event('input',{bubbles:true}));};
+ type('Project Beta');await pause();
+ ok(s.querySelectorAll('.project-row').length===1&&s.querySelectorAll('.bar').length===2,'literal activity search filters project lanes');
+ button('Overview').click();await pause();ok(s.querySelectorAll('.entry-link').length===2,'search persists across views');
+ button('Roadmap').click();await pause();button('Reset').click();await pause();
+ ok(s.querySelector('[aria-label="Search activities"]').value===''&&s.querySelectorAll('.project-row').length===2,'Reset clears search and selectors');
+ ok(button('Fit').getAttribute('aria-pressed')==='true','Fit is default scale');
+ if(innerWidth>=1000)ok(s.querySelector('.timeline-scroll').scrollWidth<=s.querySelector('.timeline-scroll').clientWidth+1,'Fit avoids desktop horizontal scrolling');
+ button('Weeks').click();await pause();
+ ok(button('Weeks').getAttribute('aria-pressed')==='true'&&parseInt(s.querySelector('.timeline').style.minWidth)>640,'Weeks scale increases timeline resolution');
+ const scroll=s.querySelector('.timeline-scroll');scroll.scrollLeft=scroll.scrollWidth;button('Today').click();await pause();
+ const marker=s.querySelector('.today-marker').getBoundingClientRect(),viewport=scroll.getBoundingClientRect();
+ ok(marker.left>=viewport.left&&marker.left<=viewport.right,'Today returns current date into view');
+ button('Months').click();await pause();ok(button('Months').getAttribute('aria-pressed')==='true','Months scale selects independently');
+ button('Fit').click();await pause();
+ ok(dispatched===1,'one bounded initial CSV read');
  button('Dark').click();await pause();
+ settleStatusTransitions(s);
  gridlineHierarchy(s,'dark');
- for(const cls of ['planned','progress','risk','blocked','complete'])ok(contrast(s.querySelector('.bar.'+cls))>=4.5,'dark '+cls+' text contrast');
+ for(const cls of ['planned','progress','risk','blocked','complete']){const element=s.querySelector('.bar.'+cls),style=getComputedStyle(element),ratio=contrast(element);ok(ratio>=4.5,'dark '+cls+' text contrast '+JSON.stringify({ratio,color:style.color,background:style.backgroundColor}));}
  for(const cls of ['planned','progress','risk','blocked','complete'])ok(s.querySelector('.bar.'+cls),'semantic '+cls);
  ok(s.querySelector('.bar.milestone'),'zero-duration point');
  ok(getComputedStyle(s.querySelector('.canvas')).backgroundColor!=='rgb(255, 255, 255)','dark canvas');
- ok(s.querySelector('a.primary').href.includes('namespace=cdp_roadmap&lookup=cdp_roadmap.csv'),'scoped editor link');
+ const editLink=s.querySelector('a.primary'),editUrl=new URL(editLink.href);
+ ok(editUrl.pathname==='/app/lookup_editor/lookup_edit'&&editUrl.searchParams.get('namespace')==='cdp_roadmap'&&editUrl.searchParams.get('lookup')==='cdp_roadmap.csv'&&editUrl.searchParams.get('owner')==='nobody','exact app-shared CSV link to Lookup Editor');
+ ok(!button('Add activity')&&!button('Save activity'),'no native editing controls');
  s.querySelector('.bar').click();await pause();ok(s.querySelector('dialog').open,'read-only details opens');ok(!s.querySelector('dialog input'),'no pretend save controls');
  s.querySelector('[aria-label="Close entry"]').click();await pause();ok(!s.querySelector('dialog'),'details closes');
- window.location.hash='#guide';await pause();ok(s.querySelector('h1').textContent==='Projects Scheulde'&&!s.querySelector('#guide'),'old guide hash falls back safely');
+ window.location.hash='#guide';await pause();ok(s.querySelector('h1').textContent==='Project Schedule'&&!s.querySelector('#guide'),'old guide hash falls back safely');
  window.location.hash='#roadmap';await pause();
  const select=s.querySelector('[aria-label="Filter status"]');select.value='In progress';select.dispatchEvent(new Event('change',{bubbles:true}));await pause();
  ok(s.querySelectorAll('.timeline-row').length===1,'status filters timeline');
@@ -106,9 +138,16 @@ async function run(){
  mode='overflow';button('Reload').click();await pause();await pause();ok(s.querySelectorAll('.entry-link').length===1000,'render cap 1000');ok(text().includes('Entry limit exceeded'),'overflow warning');
  mode='fixture';button('Reload').click();await pause();await pause();button('Roadmap').click();await pause();
  ok(document.documentElement.scrollWidth<=innerWidth,'page has no horizontal overflow');
+ settleStatusTransitions(s);
  for(const cls of ['planned','progress','risk','blocked','complete'])ok(contrast(s.querySelector('.bar.'+cls))>=4.5,'light '+cls+' text contrast');
  ok(localStorage.getItem('cdp-schedule.theme.v1')==='light'&&localStorage.length===1,'only theme preference stored');
- CDPSchedule.mount(document.getElementById('cdp-schedule-root'),{loadData:async()=>fixture,editorUrl:'/app/lookup_editor/lookup_edit?namespace=cdp_roadmap&lookup=cdp_roadmap.csv'});await pause();await pause();
+ button('Overview').click();await pause();fixture[0].milestone='Updated CSV activity';button('Reload').click();await pause();await pause();
+ ok([...s.querySelectorAll('.entry-link')].some(entry=>entry.textContent.includes('Updated CSV activity')),'Reload renders changed lookup results');
+ const editorUrl='/app/lookup_editor/lookup_edit?namespace=cdp_roadmap&lookup=cdp_roadmap.csv&type=csv&owner=nobody';
+ CDPSchedule.mount(document.getElementById('cdp-schedule-root'),{loadData:async()=>fixture,editorUrl,checkEditor:async()=>false});await pause();await pause();
+ ok(s.querySelectorAll('.entry-link').length===7&&!s.querySelector('a.primary')&&text().includes('Roadmap viewing is unaffected'),'missing Lookup Editor does not block CSV viewing');
+ CDPSchedule.mount(document.getElementById('cdp-schedule-root'),{loadData:async()=>fixture,editorUrl,checkEditor:async()=>true});await pause();await pause();
+ ok(s.querySelector('a.primary')&&!s.querySelector('form'),'Lookup Editor available without custom form');
  ok(s.querySelector('.canvas').dataset.theme==='light','theme restored on fresh mount');
  button('Dark').click();await pause();ok(s.querySelector('.canvas').dataset.theme==='dark','switch back to dark');
  button('Light').click();await pause();ok(s.querySelector('.canvas').dataset.theme==='light','final light-theme capture');
@@ -134,10 +173,10 @@ def main():
         threading.Thread(target=server.serve_forever,daemon=True).start()
         try:
             for width,height in [(1920,1080),(1440,1100),(390,844)]:
-                command=[CHROME,'--headless=new','--no-first-run','--no-default-browser-check','--disable-gpu','--use-mock-keychain','--password-store=basic','--disable-background-networking','--disable-sync','--disable-extensions',f'--user-data-dir={folder / str(width)}',f'--window-size={width},{height}','--virtual-time-budget=8000','--dump-dom',f'--screenshot={APP / "build" / ("browser-smoke-light-"+str(width)+".png")}',f'http://127.0.0.1:{server.server_port}/index.html#roadmap']
+                command=[CHROME,'--headless=new','--no-first-run','--no-default-browser-check','--disable-gpu','--use-mock-keychain','--password-store=basic','--disable-background-networking','--disable-sync','--disable-extensions',f'--user-data-dir={folder / str(width)}',f'--window-size={width},{height}','--virtual-time-budget=20000','--dump-dom',f'--screenshot={APP / "build" / ("browser-smoke-light-"+str(width)+".png")}',f'http://127.0.0.1:{server.server_port}/index.html#roadmap']
                 process=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,start_new_session=True)
                 try:
-                    stdout,stderr=process.communicate(timeout=20)
+                    stdout,stderr=process.communicate(timeout=30)
                 except subprocess.TimeoutExpired:
                     # macOS Chrome can emit the completed DOM but hang during shutdown.
                     # Terminate only this isolated test process group, never the user's browser.

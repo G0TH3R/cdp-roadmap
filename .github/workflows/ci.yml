@@ -32,8 +32,10 @@ jobs:
       - name: Build deterministic package twice
         run: |
           npm run build
-          cp build/cdp_roadmap-0.4.1.tgz /tmp/first.tgz
+          cp build/cdp_roadmap-0.7.1.tgz "$RUNNER_TEMP/first.tgz"
           npm run build
-          cmp /tmp/first.tgz build/cdp_roadmap-0.4.1.tgz
+          cmp "$RUNNER_TEMP/first.tgz" build/cdp_roadmap-0.7.1.tgz
+      - name: Check tracked generated assets are current
+        run: git diff --exit-code -- appserver/static default/data/ui/views src/roadmap.json
       - name: Verify package checksum contract
-        run: python3 -m unittest tests.test_release.ReactRelease.test_archive_matches_current_sources_and_manifest -v
+        run: python3 -m unittest discover -s tests -p test_release.py -v

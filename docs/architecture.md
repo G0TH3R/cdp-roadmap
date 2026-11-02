@@ -22,6 +22,8 @@ Browser route
   -> React Overview and Roadmap views
 ```
 
+The optional Project Category field is normalized and validated in SPL and in the client. Filters, literal search and timeline scales operate locally on the loaded result set. Blank legacy categories are retained as Uncategorized, not rewritten. Every named project must have a consistent category across its activities.
+
 Editing is intentionally separate:
 
 ```text
@@ -31,7 +33,7 @@ Edit entries link
   -> user returns to the app and selects Reload
 ```
 
-The app installs no custom REST handler, scheduled search, index, input, alert action, or search-time write. It does not call an external network service or CDN.
+Lookup Editor availability is discovered through a bounded same-origin GET. An absent/disabled/inaccessible editor disables editing without blocking CSV viewing; discovery is not write authorization. The app installs no custom REST handler, scheduled search, index, input, alert action, or search-time write. It does not call an external network service or CDN.
 
 ## Trust boundaries
 

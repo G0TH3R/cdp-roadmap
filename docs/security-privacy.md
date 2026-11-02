@@ -2,31 +2,28 @@
 
 ## Data handled
 
-The application displays the contents of `cdp_roadmap.csv`: project/activity names, dates, statuses, owners, dependencies, and acceptance criteria. Administrators decide whether those fields contain public, internal, confidential, or personal information. The eight packaged rows are synthetic examples.
+The app displays CSV project/category/activity text, dates, status, owner roles, dependencies and completion criteria. Administrators own data classification and access policy. The public CSV contains only eight synthetic Example projects/activities with `DEMO-*` IDs and Example Owner labels; it is not copied from a live instance.
 
 ## Security model
 
-- Splunk authentication, role capabilities, and knowledge-object ACLs control access.
-- Packaged ACLs are admin-only and app-local (`export = none`).
-- The runtime performs one bounded, read-only `inputlookup`; it does not use `outputlookup`.
-- No custom REST endpoint, scripted input, scheduled search, alert action, credential store, external API, telemetry endpoint, or CDN is included.
-- Search-result strings are rendered as text by React.
-- Lookup editing is delegated to same-origin Splunk Lookup Editor and requires the user's existing authorization.
-- Only the dark/light preference is placed in local storage. Results and lookup records are not persisted by the app.
+- Splunk authentication, app access, capabilities and knowledge-object ACLs are authoritative.
+- Packaged app/view reads and CSV reads/writes are all-role, definition writes admin-only, with `export = none`. Review these broad defaults and local overrides before production use. Lookup Editor requires its own access/capabilities.
+- Runtime data access is bounded, read-only inputlookup with explicit search bounds. No outputlookup, KV Store, custom REST writer, scripted input, scheduled search or external API is included.
+- React renders result text without injecting result HTML. Category validation does not replace output escaping or authorization.
+- Editing is delegated to accessible same-origin Lookup Editor; discovery is a bounded GET and does not authorize writes.
+- Only the theme preference is stored in local storage, never CSV results.
+- The launcher author field and Studio author line are omitted. Required third-party notices remain.
 
-## Deployment guidance
+## Publication safeguards
 
-- Verify release checksums and package inventory before installation.
-- Preserve and review local configuration and ACLs during upgrades.
-- Do not expose the app or lookup more broadly than required.
-- Avoid personal identifiers in `owner`; prefer approved role/team labels.
-- Review roadmap text and screenshots before sharing them outside the authorized audience.
-- Monitor recent app-specific logs after installation.
+Only reviewed app source, synthetic seed data, tests, documentation and synthetic screenshots belong in this repository. Do not publish operational CSV snapshots, planning exports, receipts, backups, target-specific automation, credentials, internal URLs, private hostnames or absolute home paths. Build archives must be reopened to verify the lookup is the same dummy CSV as the source. A clean source tree alone is insufficient if an asset contains real data.
 
-## Repository privacy review
+Tests guard synthetic ID/project/owner conventions, archive ownership, retained library notices, forbidden artifact paths and obvious secrets/private paths. These checks are not a guarantee of anonymity or a substitute for human review. Existing Git/release history is not rewritten by a new sanitized commit.
 
-Public source excludes credentials, tokens, raw event data, private deployment receipts and backups, environment-specific host aliases, internal URLs/topology, absolute user paths, and deployment automation tied to a particular system. Published screenshots use synthetic test records and contain no browser chrome, hostnames, URLs, user identities, or embedded origin metadata found by the documented review.
+Screenshots must be regenerated using synthetic data without Splunk/browser chrome or user identity, then reviewed for text and PNG metadata. Never reuse screenshots of live planning records for public distribution.
 
-## Reporting a vulnerability
+## Operations
 
-Follow `SECURITY.md`. Do not disclose credentials, production data, or exploitable details in a public issue.
+Back up live data and ACLs before upgrades or bulk imports. Never replace live data with the bundled examples. Confirm stored values and intended-role access after edits; on SHC verify another member. Removing author fields does not anonymize project text, ownership or instance audit records.
+
+Follow `SECURITY.md` to report a vulnerability. Do not post credentials, production data or exploitable details in public issues.

@@ -1,4 +1,6 @@
 | inputlookup max=1001 cdp_roadmap.csv
+| eval project=trim(coalesce(project,"")), project_category=trim(coalesce(project_category,"")), category_value="category:".project_category
+| eventstats dc(category_value) AS project_category_count BY project
 | eventstats count AS id_count BY id
 | eval start_epoch=strptime(start_date,"%Y-%m-%d"), end_epoch=strptime(end_date,"%Y-%m-%d")
 | eval validation=case(
@@ -8,6 +10,8 @@
     isnull(start_epoch) OR isnull(end_epoch) OR strftime(start_epoch,"%Y-%m-%d")!=start_date OR strftime(end_epoch,"%Y-%m-%d")!=end_date, "Invalid date",
     end_epoch<start_epoch, "End precedes start",
     NOT in(coalesce(status,""),"Planned","In progress","At risk","Blocked","Complete"), "Unsupported status",
+    len(project_category)>0 AND NOT in(project_category,"Observability","Security","Infrastructure","Automation & Analytics","OT/ICS"), "Unsupported project category",
+    len(project)>0 AND project_category_count>1, "Conflicting project categories",
     true(), "OK")
 | eval timeline_label=trim(coalesce(timeline_label,"")), duration=(end_epoch-start_epoch)*1000, item=id." | ".if(len(timeline_label)>0,timeline_label,milestone)
-| table id project workstream milestone timeline_label start_date end_date status owner dependency_ids acceptance_criteria start_epoch duration item validation
+| table id project project_category workstream milestone timeline_label start_date end_date status owner dependency_ids acceptance_criteria start_epoch duration item validation

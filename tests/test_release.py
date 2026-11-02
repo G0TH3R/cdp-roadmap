@@ -42,6 +42,10 @@ class ReactRelease(unittest.TestCase):
         self.assertIn('inputlookup max=1001 cdp_roadmap.csv',text)
         self.assertIn("earliest_time: '-24h', latest_time: 'now'",text)
         self.assertIn('namespace=cdp_roadmap&lookup=cdp_roadmap.csv',text)
+        self.assertIn('checkLookupEditor',text)
+        self.assertIn('project_category',text)
+        self.assertNotIn('Save activity',text)
+        self.assertNotIn('Scheulde',text)
         self.assertNotIn('CDP-001',text)
         self.assertNotIn('index=*',text)
         self.assertNotIn('outputlookup',text)
@@ -68,18 +72,23 @@ class ReactRelease(unittest.TestCase):
                 names.append(rel)
             self.assertEqual(len(names),len(set(names)))
             self.assertEqual(set(names),set(manifest['runtime_files']))
+            self.assertNotIn('default/collections.conf',names)
+            self.assertFalse(any(name.startswith('bin/') for name in names))
 
-    def test_lookup_has_exact_timeline_labels_and_normalized_release_project(self):
+    def test_packaged_lookup_contains_only_dummy_rows_and_all_categories(self):
         import csv
         with (APP/'lookups/cdp_roadmap.csv').open(newline='') as handle:
             rows = list(csv.DictReader(handle))
-        self.assertEqual([row['id'] for row in rows], [f'CDP-{i:03d}' for i in range(1, 9)])
-        self.assertEqual([row['timeline_label'] for row in rows], [
-            'Scope & Success', 'Data Ownership', 'Source Onboarding', 'Data Quality',
-            'Support Handover', 'Go-Live Decision', 'Architecture Review', 'Pilot Readiness'])
-        self.assertEqual(rows[0]['project'], 'Release 1.0')
-        self.assertEqual({row['project'] for row in rows[:6]}, {'Release 1.0'})
-        self.assertEqual({row['project'] for row in rows[6:]}, {'Release 1.1'})
+        self.assertEqual([row['id'] for row in rows], [f'DEMO-{i:03d}' for i in range(1, 9)])
+        self.assertEqual({r['project_category'] for r in rows}, {'Observability','Security','Infrastructure','Automation & Analytics','OT/ICS'})
+        for row in rows:
+            self.assertTrue(row['project'].startswith('Example '))
+            self.assertTrue(row['owner'].startswith('Example Owner '))
+            self.assertTrue(row['timeline_label'])
+        with tarfile.open(APP/'build'/json.loads((APP/'build/manifest.json').read_text())['package']) as archive:
+            lookup=archive.extractfile('cdp_roadmap/lookups/cdp_roadmap.csv')
+            assert lookup is not None
+            self.assertEqual(lookup.read(),(APP/'lookups/cdp_roadmap.csv').read_bytes())
 
 
 if __name__ == '__main__':

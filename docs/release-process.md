@@ -3,7 +3,7 @@
 ## Prepare
 
 1. Update `default/app.conf`, `package.json`, and `CHANGELOG.md` to the same version.
-2. Update the versioned asset expectation in tests when required.
+2. Update package-lock.json, current versioned asset exceptions in .gitignore and workflow artifact paths. Remove superseded tracked runtime bundles, not historical release assets.
 3. Review every seed lookup row and screenshot for public suitability.
 4. Install pinned dependencies with `npm ci --ignore-scripts`.
 
@@ -30,14 +30,12 @@ Splunk AppInspect should be run when available. Passing local tests is not a Spl
 
 ## Publish
 
-1. Create a conventional release commit.
-2. Create signed or annotated tag `vX.Y.Z`.
-3. Push the exact commit and tag.
-4. Wait for CI and verify its result.
-5. Create the release from the existing tag and attach `build/cdp_roadmap-X.Y.Z.tgz`.
-6. Record the SHA-256 in release notes.
-7. Read back repository visibility, default branch, commit, tag, release, asset metadata, and anonymous cloneability.
+1. Review the staged diff and exact Git-tree inventory, including a reopened dummy-only package and regenerated screenshots.
+2. Create a conventional commit with the approved GitHub noreply identity; push only to the requested repository/ref.
+3. Wait for automatically triggered CI and verify the remote commit, CSV and checks. A successful push alone is not CI success.
+4. Only when separately authorized, create a tag/release and attach the verified package with its SHA-256. A source push is not a published GitHub Release.
+5. Read back any authorized tag/release/assets and anonymous cloneability before claiming publication succeeded.
 
-## Version 0.4.1 expected artifact
+## Version 0.7.1 expected artifact
 
-The canonical filename is `cdp_roadmap-0.4.1.tgz`. Its digest must be taken from the newly verified standalone build and must match `build/manifest.json` and both release assets.
+The canonical filename is `cdp_roadmap-0.7.1.tgz`. Its digest must come from the public checkout's dummy-data build and match `build/manifest.json`. Never reuse an operational-instance archive or assume its digest matches the synthetic distribution. No operational CSV, receipt, backup or deployment automation should be attached.

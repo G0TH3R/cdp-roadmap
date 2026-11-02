@@ -13,7 +13,7 @@ test('entry exports the mount adapter and isolates styles in Shadow DOM', () => 
   assert.doesNotMatch(css, /body\.canvas|:root/);
 });
 
-test('production UI is read-only with explicit loading, errors, overflow and details', () => {
+test('production UI reads CSV and delegates editing to Lookup Editor', () => {
   assert.match(source, /Edit entries/);
   assert.match(source, /Reload/);
   assert.match(source, /showModal\(/);
@@ -23,4 +23,7 @@ test('production UI is read-only with explicit loading, errors, overflow and det
   assert.match(source, /1,000/);
   assert.doesNotMatch(source, /dangerouslySetInnerHTML|innerHTML|localStorage|sessionStorage|window\.require|Apply to preview|CDP-001|fetch\(/);
   assert.match(source, /loadData\(\)/);
+  assert.match(source, /editorUrl/);
+  assert.match(source, /Lookup Editor is unavailable or inaccessible/);
+  assert.doesNotMatch(source, /saveData|EditDialog|Save activity|Scheulde/);
 });

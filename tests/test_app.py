@@ -27,6 +27,7 @@ class AppContract(unittest.TestCase):
         self.assertEqual(self.definition()['title'], 'CDP Program Management')
         self.assertEqual(conf['ui']['is_visible'], '1')
         self.assertEqual(conf['install']['state'], 'enabled')
+        self.assertEqual(conf['shclustering']['deployer_lookups_push_mode'], 'always_preserve')
         nav = ET.parse(APP / 'default/data/ui/nav/default.xml').getroot()
         default_view = nav.find("view[@default='true']")
         assert default_view is not None
@@ -35,9 +36,10 @@ class AppContract(unittest.TestCase):
             self.assertTrue((APP / 'default/data/ui/views' / (view.attrib['name'] + '.xml')).is_file())
         editor_link = nav.find('a')
         assert editor_link is not None
-        self.assertIn('namespace=cdp_roadmap', editor_link.attrib['href'])
+        self.assertIn('../lookup_editor/lookup_edit?namespace=cdp_roadmap', editor_link.attrib['href'])
         meta = (APP / 'metadata/default.meta').read_text()
-        self.assertIn('read : [ admin ], write : [ admin ]', meta)
+        self.assertIn('read : [ * ], write : [ admin ]', meta)
+        self.assertIn('read : [ * ], write : [ * ]', meta)
         self.assertIn('export = none', meta)
 
     def test_native_timeline_and_parseable_start_times(self):
@@ -69,12 +71,12 @@ class AppContract(unittest.TestCase):
         for obj in list(d['visualizations'].values()) + list(d['inputs'].values()):
             for ref in obj.get('dataSources', {}).values():
                 self.assertIn(ref, d['dataSources'])
-        self.assertEqual(len(d['inputs']), 3)
+        self.assertEqual(len(d['inputs']), 4)
         for obj in d['inputs'].values():
             self.assertEqual(obj['options']['defaultValue'], '__all__')
         for ds in d['dataSources'].values():
             for token in re.findall(r'\$([^$]+)\$', ds['options']['query']):
-                self.assertIn(token, ['workstream|s', 'status|s', 'owner|s'])
+                self.assertIn(token, ['project_category|s', 'workstream|s', 'status|s', 'owner|s'])
         for layout in d['layout']['layoutDefinitions'].values():
             for block in layout['structure']:
                 self.assertIn(block['item'], d['visualizations'])
@@ -89,7 +91,7 @@ class AppContract(unittest.TestCase):
         nav = ET.parse(APP / 'default/data/ui/nav/default.xml').getroot()
         self.assertIsNone(nav.find("view[@name='guide']"))
         definition = self.definition()
-        self.assertEqual(definition['visualizations']['viz_timeline']['title'], 'Projects Scheulde')
+        self.assertEqual(definition['visualizations']['viz_timeline']['title'], 'Project Schedule')
         self.assertNotIn('Editing guide', json.dumps(definition))
         self.assertNotIn('viz_note', definition['visualizations'])
 

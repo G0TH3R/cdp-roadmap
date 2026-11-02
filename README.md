@@ -1,90 +1,79 @@
 # CDP Program Management
 
-CDP Program Management is a lookup-backed planning canvas for Splunk Enterprise. It combines a React timeline with an Overview register, shared filters, validation feedback, accessible details, fiscal-week subdivisions, and a native Dashboard Studio fallback. The stable Splunk app ID is `cdp_roadmap`.
+Version **0.7.1** is a CSV-backed project planning app for Splunk Enterprise. The stable app ID is `cdp_roadmap`. It provides an Overview register, project timeline, shared filters, validation feedback and a Dashboard Studio fallback.
 
-![Dark roadmap view](docs/screenshots/roadmap-dark.png)
+![Dark roadmap with synthetic sample data](docs/screenshots/roadmap-dark.png)
 
-Additional views: [light theme](docs/screenshots/roadmap-light.png) · [mobile viewport](docs/screenshots/roadmap-mobile.png)
+[Light theme](docs/screenshots/roadmap-light.png) · [Mobile viewport](docs/screenshots/roadmap-mobile.png)
 
 ## Features
 
-- Project and activity grouping with shared project, workstream, status, and owner filters.
-- Read-only timeline and entry details backed by one bounded `inputlookup max=1001` search.
-- Planned, In progress, At risk, Blocked, and Complete states with text and color.
-- Milestone points for same-day activities and informational dependencies.
-- Federal fiscal-week labels: the fiscal year starts October 1; W01 begins October 1, seven-day intervals follow, and a final partial W53 ends September 30.
-- A two-pixel **Today** marker derived from the browser's local calendar date. It appears only when today falls inside the visible timeline.
-- Dark and light canvas themes. Only the theme choice is stored in browser local storage; lookup records are not cached there.
-- Accessible keyboard navigation, focus-managed details, responsive controls, and horizontally scrollable narrow timelines.
-- A Dashboard Studio fallback at `studio_roadmap`.
+- Separate **Project Category**, project, workstream, status and owner filters, plus literal case-insensitive search.
+- Categories: **Observability**, **Security**, **Infrastructure**, **Automation & Analytics**, **OT/ICS**. All five choices remain available even when empty.
+- Compact layout, Fit / Months / Weeks scales, a Today control, project lanes and parallel activity tracks.
+- Category labels in the register, timeline and read-only details; legacy missing categories display **Uncategorized**.
+- One bounded `inputlookup max=1001` read on load/Reload. Filtering, tabs and timeline scales do not dispatch new searches.
+- Dark/light themes, keyboard-friendly controls, milestone points and informational dependencies.
+- Optional Lookup Editor discovery: unavailable editing does not block viewing.
+- No KV Store, custom Python handler, native write endpoint, external API or CDN.
 
-The included `lookups/cdp_roadmap.csv` contains exactly eight reviewed, illustrative seed rows. They are examples, not a real delivery plan or commitment.
+**Only dummy data is included.** The eight `DEMO-*` rows use fictional Example projects and Example Owner labels. They demonstrate all five categories/statuses and are not an operational roadmap. No live CSV, project plan, deployment receipt or environment-specific automation is published.
 
-## Compatibility assumptions
+## Compatibility
 
-The app targets Splunk Enterprise 10.x and has been exercised on Splunk Enterprise 10.4.1. It uses Classic Simple XML 1.1, SplunkJS MVC, Dashboard Studio schema version 2, and the Splunk Lookup Editor app for editing. JavaScript must be enabled. The production bundle targets Chrome 100+, Firefox 100+, and Safari 15.4+.
+Targets Splunk Enterprise 10.x with JavaScript, Classic Simple XML 1.1 and locally bundled React. The Studio fallback uses schema version 2. The bundle targets Chrome 100+, Firefox 100+ and Safari 15.4+; this is a compilation target, not proof of every browser/platform combination.
 
-Splunk Cloud compatibility or certification is not claimed. Run Splunk AppInspect and your own acceptance checks for the target platform before production use.
+Runtime validation has been performed on a standalone Enterprise 10.6 environment. Separate 10.4, SHC, non-admin and Splunk Cloud acceptance/certification are not claimed. Validate the intended target and installed Lookup Editor version/capabilities before production use.
 
-## Install
+## Install or upgrade
 
-1. Download `cdp_roadmap-0.4.1.tgz` from the v0.4.1 release.
-2. Back up any existing `cdp_roadmap` app, especially `local/`, `lookups/`, and `metadata/`.
-3. Install through your supported Splunk app-management process.
-4. Confirm the effective app ID and version, then open:
+Build the current package from source, or use an explicitly published release asset for the desired version. Do not assume an older release asset is version 0.7.1.
 
-   `/en-US/app/cdp_roadmap/roadmap`
+1. Back up the existing app, live lookup, local configuration and ACLs.
+2. Inspect `build/cdp_roadmap-0.7.1.tgz`, then install through the topology's supported process.
+3. **Preserve live CSV data on upgrades; never overwrite it with dummy seed rows.** Review destination local overrides and packaged default ACL changes.
+4. Activate app/view discovery using the supported operating procedure; approve any required restart separately.
+5. Verify the effective version, app-scoped lookup, permissions and `/en-US/app/cdp_roadmap/roadmap`.
 
-5. Verify the lookup ACL, the eight seed rows (new installs only), timeline rendering, filters, details, and the Edit entries link.
+For SHC, use the deployer and review `[shclustering] deployer_lookups_push_mode = always_preserve`; verify supported lookup-save replication across members. This setting is not a substitute for deployment-specific review.
 
-A service restart is not always required, but app/view discovery must be refreshed according to your Splunk operating procedure.
+## Editing and access
 
-## Upgrade
+Select **Edit entries**, save the app-shared CSV in Lookup Editor, return and select **Reload**. Missing/inaccessible Lookup Editor disables editing without blocking reads. The runtime itself never writes data.
 
-Treat upgrades as controlled app replacements. Preserve site-owned `local/`, `lookups/`, and metadata ACL content; the packaged seed lookup must not overwrite live planning data. Stage and inspect the archive, compare effective configuration before and after, activate app discovery, and repeat the route/search/UI checks. No environment-specific deployment automation is published in this repository.
+Packaged metadata allows all-role app/view reads and lookup reads/writes, with admin-only definition writes and app-local sharing. This is intentionally broad: review it for least privilege before sharing. Effective ACL overrides, app access and Lookup Editor capabilities still apply; a wildcard ACL does not grant every required capability.
 
-## Edit roadmap data
+When adding a CSV column through Lookup Editor, create/name the column before importing: some versions ignore extra import columns. Review the entire buffer and any trailing blank row before saving, keep a backup, and verify the stored data afterward.
 
-Choose **Edit entries** to open Lookup Editor for `cdp_roadmap/cdp_roadmap.csv`. Save there, return to the app, and choose **Reload**. The canvas never writes the lookup itself. See [Lookup schema](docs/lookup-schema.md) for columns and validation rules.
+See [Lookup schema](docs/lookup-schema.md) and [Administrator guide](docs/administrator-guide.md).
 
 ## Build and test
 
-Requirements: Python 3.9+, Node.js 20+, and npm.
+Requirements: Python 3.9+, Node.js 20+ and npm.
 
 ```sh
 npm ci --ignore-scripts
 npm test
 npm run build
-sha256sum build/cdp_roadmap-0.4.1.tgz
 ```
 
-`tools/build_release.py` creates a deterministic archive with `cdp_roadmap/` at the root and records file hashes in `build/manifest.json`. Only `default/`, `metadata/`, `lookups/`, and `appserver/` are packaged.
+`tools/build_release.py` creates a deterministic archive and `build/manifest.json`. Only `default/`, `metadata/`, `lookups/` and `appserver/` ship. Tests verify source/package hashes, synthetic-only seed data, neutral archive ownership and retained library license notices. On macOS with Google Chrome, `python3 tools/browser_smoke.py` additionally exercises the exact release bundle with isolated synthetic SplunkJS responses.
 
-## Rollback and uninstall
+AppInspect and target-instance checks remain release gates. Local tests are not Splunk Cloud certification.
 
-Rollback by restoring a verified pre-upgrade backup of the complete app directory, while preserving lookup or ACL changes made after the upgrade when required. Refresh app discovery and repeat the same verification checks. Uninstall only through an approved Splunk maintenance process after exporting any roadmap data that must be retained. Removing the app removes its packaged views and may remove locally maintained lookup data.
+## Constraints
 
-## Known constraints
-
-- Maximum 1,000 rendered rows; row 1,001 is used only to detect overflow.
-- Dependencies are displayed as metadata, not scheduled automatically.
-- End dates are exclusive for bars; same-day entries render as milestone points.
-- Invalid rows remain inspectable in Overview but are omitted from the timeline.
-- Lookup ACLs are admin-only by default and must be deliberately changed for broader access.
-- The Studio fallback is activity-oriented and does not reproduce all React project-grouping behavior.
-- The visible heading intentionally retains the historical spelling `Projects Scheulde` in v0.4.1.
+- Maximum 1,000 displayed activities; a 1,001st row detects overflow.
+- Dates are calendar dates; bar end dates are exclusive and equal start/end dates create points.
+- Dependencies do not enforce or recalculate schedules.
+- All activities in one named project must share one category. Unsupported/conflicting values remain inspectable in Overview but are omitted from the timeline.
+- The Studio fallback does not reproduce every React interaction.
+- Personal app-author metadata is omitted; required third-party notices remain. Removing author fields does not anonymize CSV text or instance audit/ownership records.
 
 ## Documentation
 
-- [Architecture and data flow](docs/architecture.md)
-- [Lookup schema](docs/lookup-schema.md)
-- [Administrator guide](docs/administrator-guide.md)
-- [Release process](docs/release-process.md)
-- [Security and privacy](docs/security-privacy.md)
-- [Contributing](CONTRIBUTING.md)
-- [Security policy](SECURITY.md)
-- [Changelog](CHANGELOG.md)
+[Architecture](docs/architecture.md) · [Lookup schema](docs/lookup-schema.md) · [Administrator guide](docs/administrator-guide.md) · [Release process](docs/release-process.md) · [Security/privacy](docs/security-privacy.md) · [Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md) · [Changelog](CHANGELOG.md)
 
 ## License status
 
-No license is granted at this time. The repository is publicly visible for inspection and collaboration, but copyright and other rights remain reserved until the owner selects and adds a license. See `CONTRIBUTING.md` before submitting changes.
+No license is granted for the app's original code at this time. Public visibility is not a license grant; rights remain reserved until the owner adds a license. Third-party components retain their own required license notices. See `CONTRIBUTING.md` before submitting changes.

@@ -9,8 +9,8 @@ import tarfile
 from xml.sax.saxutils import escape
 
 APP = Path(__file__).resolve().parents[1]
-FILTER = 'where ($workstream|s$="__all__" OR workstream=$workstream|s$) AND ($status|s$="__all__" OR status=$status|s$) AND ($owner|s$="__all__" OR owner=$owner|s$)'
-EDITOR = '/en-US/app/lookup_editor/lookup_edit?namespace=cdp_roadmap&lookup=cdp_roadmap.csv&type=csv&owner=nobody'
+FILTER = 'where ($project_category|s$="__all__" OR project_category=$project_category|s$) AND ($workstream|s$="__all__" OR workstream=$workstream|s$) AND ($status|s$="__all__" OR status=$status|s$) AND ($owner|s$="__all__" OR owner=$owner|s$)'
+EDITOR = '../lookup_editor/lookup_edit?namespace=cdp_roadmap&lookup=cdp_roadmap.csv&type=csv&owner=nobody'
 
 
 def chain(query):
@@ -42,15 +42,15 @@ def main():
             'query': (APP / 'src/base.spl').read_text().strip(),
             'queryParameters': {'earliest': '-24h', 'latest': 'now'}}},
         'ds_timeline': chain(FILTER + '\n| where validation="OK"\n| sort 0 start_epoch id\n| head 1000\n| eval start_iso=strftime(start_epoch,"%Y-%m-%dT%H:%M:%S")\n| table start_iso item duration status owner workstream acceptance_criteria'),
-        'ds_details': chain(FILTER + '\n| sort 0 start_date id\n| head 1000\n| table id project workstream milestone timeline_label owner status start_date end_date dependency_ids acceptance_criteria validation'),
+        'ds_details': chain(FILTER + '\n| sort 0 start_date id\n| head 1000\n| table id project project_category workstream milestone timeline_label owner status start_date end_date dependency_ids acceptance_criteria validation'),
         'ds_summary': chain(FILTER + '\n| stats count AS entries count(eval(status="In progress")) AS in_progress count(eval(status="At risk" OR status="Blocked")) AS attention count(eval(duration=0 AND validation="OK")) AS milestones'),
         'ds_health': chain('stats count AS rows_read count(eval(validation!="OK")) AS invalid_entries\n| eval health=if(invalid_entries>0,"Invalid entries","No validation errors"), coverage=if(rows_read>1000,"LIMIT EXCEEDED: only first 1,001 rows checked","Within 1,000-entry limit")\n| table rows_read invalid_entries health coverage'),
         'ds_workstreams': chain('stats count BY workstream | where workstream!="__all__" | sort 0 workstream | fields workstream'),
         'ds_owners': chain('stats count BY owner | where owner!="__all__" | sort 0 owner | fields owner'),
     }
     visualizations = {
-        'viz_header': {'type': 'splunk.markdown', 'options': {'markdown': '## CDP Program Management\nAuthor: G0TH3R · [Edit entries](' + EDITOR + ')'}},
-        'viz_timeline': {'type': 'splunk.timeline', 'title': 'Projects Scheulde', 'dataSources': {'primary': 'ds_timeline'}, 'options': json.loads((APP / 'src/timeline_options.json').read_text())},
+        'viz_header': {'type': 'splunk.markdown', 'options': {'markdown': '## CDP Program Management\n[Edit entries](' + EDITOR + ')'}},
+        'viz_timeline': {'type': 'splunk.timeline', 'title': 'Project Schedule', 'dataSources': {'primary': 'ds_timeline'}, 'options': json.loads((APP / 'src/timeline_options.json').read_text())},
         'viz_details': {'type': 'splunk.table', 'title': 'Entry register', 'dataSources': {'primary': 'ds_details'}, 'options': {'count': 10, 'wrap': True, 'rowNumbers': False, 'dataOverlayMode': 'none'}},
         'viz_health': {'type': 'splunk.table', 'title': 'Lookup health · all entries before filters', 'dataSources': {'primary': 'ds_health'}, 'options': {'count': 1, 'wrap': True, 'rowNumbers': False, 'dataOverlayMode': 'none'}},
 

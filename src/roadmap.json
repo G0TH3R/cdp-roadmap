@@ -2,6 +2,44 @@
   "title": "CDP Program Management",
   "description": "Projects, activities, ownership, and delivery status.",
   "inputs": {
+    "input_project_category": {
+      "type": "input.dropdown",
+      "title": "Project Category",
+      "options": {
+        "token": "project_category",
+        "defaultValue": "__all__",
+        "items": [
+          {
+            "label": "All categories",
+            "value": "__all__"
+          },
+          {
+            "label": "Observability",
+            "value": "Observability"
+          },
+          {
+            "label": "Security",
+            "value": "Security"
+          },
+          {
+            "label": "Infrastructure",
+            "value": "Infrastructure"
+          },
+          {
+            "label": "Automation & Analytics",
+            "value": "Automation & Analytics"
+          },
+          {
+            "label": "OT/ICS",
+            "value": "OT/ICS"
+          },
+          {
+            "label": "Uncategorized",
+            "value": ""
+          }
+        ]
+      }
+    },
     "input_workstream": {
       "type": "input.dropdown",
       "title": "Workstream",
@@ -109,12 +147,12 @@
     "viz_header": {
       "type": "splunk.markdown",
       "options": {
-        "markdown": "## CDP Program Management\nAuthor: G0TH3R · [Edit entries](/en-US/app/lookup_editor/lookup_edit?namespace=cdp_roadmap&lookup=cdp_roadmap.csv&type=csv&owner=nobody)"
+        "markdown": "## CDP Program Management\n[Edit entries](../lookup_editor/lookup_edit?namespace=cdp_roadmap&lookup=cdp_roadmap.csv&type=csv&owner=nobody)"
       }
     },
     "viz_timeline": {
       "type": "splunk.timeline",
-      "title": "Projects Scheulde",
+      "title": "Project Schedule",
       "dataSources": {
         "primary": "ds_timeline"
       },
@@ -230,7 +268,7 @@
       "type": "ds.search",
       "name": "Roadmap lookup — capped and validated",
       "options": {
-        "query": "| inputlookup max=1001 cdp_roadmap.csv\n| eventstats count AS id_count BY id\n| eval start_epoch=strptime(start_date,\"%Y-%m-%d\"), end_epoch=strptime(end_date,\"%Y-%m-%d\")\n| eval validation=case(\n    len(trim(coalesce(id,\"\")))=0 OR len(trim(coalesce(workstream,\"\")))=0 OR len(trim(coalesce(milestone,\"\")))=0 OR len(trim(coalesce(owner,\"\")))=0, \"Missing required text\",\n    id_count>1, \"Duplicate ID\",\n    len(coalesce(start_date,\"\"))!=10 OR len(coalesce(end_date,\"\"))!=10 OR NOT match(coalesce(start_date,\"\"),\"^[0-9]{4}-[0-9]{2}-[0-9]{2}\") OR NOT match(coalesce(end_date,\"\"),\"^[0-9]{4}-[0-9]{2}-[0-9]{2}\"), \"Use YYYY-MM-DD dates\",\n    isnull(start_epoch) OR isnull(end_epoch) OR strftime(start_epoch,\"%Y-%m-%d\")!=start_date OR strftime(end_epoch,\"%Y-%m-%d\")!=end_date, \"Invalid date\",\n    end_epoch<start_epoch, \"End precedes start\",\n    NOT in(coalesce(status,\"\"),\"Planned\",\"In progress\",\"At risk\",\"Blocked\",\"Complete\"), \"Unsupported status\",\n    true(), \"OK\")\n| eval timeline_label=trim(coalesce(timeline_label,\"\")), duration=(end_epoch-start_epoch)*1000, item=id.\" | \".if(len(timeline_label)>0,timeline_label,milestone)\n| table id project workstream milestone timeline_label start_date end_date status owner dependency_ids acceptance_criteria start_epoch duration item validation",
+        "query": "| inputlookup max=1001 cdp_roadmap.csv\n| eval project=trim(coalesce(project,\"\")), project_category=trim(coalesce(project_category,\"\")), category_value=\"category:\".project_category\n| eventstats dc(category_value) AS project_category_count BY project\n| eventstats count AS id_count BY id\n| eval start_epoch=strptime(start_date,\"%Y-%m-%d\"), end_epoch=strptime(end_date,\"%Y-%m-%d\")\n| eval validation=case(\n    len(trim(coalesce(id,\"\")))=0 OR len(trim(coalesce(workstream,\"\")))=0 OR len(trim(coalesce(milestone,\"\")))=0 OR len(trim(coalesce(owner,\"\")))=0, \"Missing required text\",\n    id_count>1, \"Duplicate ID\",\n    len(coalesce(start_date,\"\"))!=10 OR len(coalesce(end_date,\"\"))!=10 OR NOT match(coalesce(start_date,\"\"),\"^[0-9]{4}-[0-9]{2}-[0-9]{2}\") OR NOT match(coalesce(end_date,\"\"),\"^[0-9]{4}-[0-9]{2}-[0-9]{2}\"), \"Use YYYY-MM-DD dates\",\n    isnull(start_epoch) OR isnull(end_epoch) OR strftime(start_epoch,\"%Y-%m-%d\")!=start_date OR strftime(end_epoch,\"%Y-%m-%d\")!=end_date, \"Invalid date\",\n    end_epoch<start_epoch, \"End precedes start\",\n    NOT in(coalesce(status,\"\"),\"Planned\",\"In progress\",\"At risk\",\"Blocked\",\"Complete\"), \"Unsupported status\",\n    len(project_category)>0 AND NOT in(project_category,\"Observability\",\"Security\",\"Infrastructure\",\"Automation & Analytics\",\"OT/ICS\"), \"Unsupported project category\",\n    len(project)>0 AND project_category_count>1, \"Conflicting project categories\",\n    true(), \"OK\")\n| eval timeline_label=trim(coalesce(timeline_label,\"\")), duration=(end_epoch-start_epoch)*1000, item=id.\" | \".if(len(timeline_label)>0,timeline_label,milestone)\n| table id project project_category workstream milestone timeline_label start_date end_date status owner dependency_ids acceptance_criteria start_epoch duration item validation",
         "queryParameters": {
           "earliest": "-24h",
           "latest": "now"
@@ -241,21 +279,21 @@
       "type": "ds.chain",
       "options": {
         "extend": "ds_roadmap",
-        "query": "where ($workstream|s$=\"__all__\" OR workstream=$workstream|s$) AND ($status|s$=\"__all__\" OR status=$status|s$) AND ($owner|s$=\"__all__\" OR owner=$owner|s$)\n| where validation=\"OK\"\n| sort 0 start_epoch id\n| head 1000\n| eval start_iso=strftime(start_epoch,\"%Y-%m-%dT%H:%M:%S\")\n| table start_iso item duration status owner workstream acceptance_criteria"
+        "query": "where ($project_category|s$=\"__all__\" OR project_category=$project_category|s$) AND ($workstream|s$=\"__all__\" OR workstream=$workstream|s$) AND ($status|s$=\"__all__\" OR status=$status|s$) AND ($owner|s$=\"__all__\" OR owner=$owner|s$)\n| where validation=\"OK\"\n| sort 0 start_epoch id\n| head 1000\n| eval start_iso=strftime(start_epoch,\"%Y-%m-%dT%H:%M:%S\")\n| table start_iso item duration status owner workstream acceptance_criteria"
       }
     },
     "ds_details": {
       "type": "ds.chain",
       "options": {
         "extend": "ds_roadmap",
-        "query": "where ($workstream|s$=\"__all__\" OR workstream=$workstream|s$) AND ($status|s$=\"__all__\" OR status=$status|s$) AND ($owner|s$=\"__all__\" OR owner=$owner|s$)\n| sort 0 start_date id\n| head 1000\n| table id project workstream milestone timeline_label owner status start_date end_date dependency_ids acceptance_criteria validation"
+        "query": "where ($project_category|s$=\"__all__\" OR project_category=$project_category|s$) AND ($workstream|s$=\"__all__\" OR workstream=$workstream|s$) AND ($status|s$=\"__all__\" OR status=$status|s$) AND ($owner|s$=\"__all__\" OR owner=$owner|s$)\n| sort 0 start_date id\n| head 1000\n| table id project project_category workstream milestone timeline_label owner status start_date end_date dependency_ids acceptance_criteria validation"
       }
     },
     "ds_summary": {
       "type": "ds.chain",
       "options": {
         "extend": "ds_roadmap",
-        "query": "where ($workstream|s$=\"__all__\" OR workstream=$workstream|s$) AND ($status|s$=\"__all__\" OR status=$status|s$) AND ($owner|s$=\"__all__\" OR owner=$owner|s$)\n| stats count AS entries count(eval(status=\"In progress\")) AS in_progress count(eval(status=\"At risk\" OR status=\"Blocked\")) AS attention count(eval(duration=0 AND validation=\"OK\")) AS milestones"
+        "query": "where ($project_category|s$=\"__all__\" OR project_category=$project_category|s$) AND ($workstream|s$=\"__all__\" OR workstream=$workstream|s$) AND ($status|s$=\"__all__\" OR status=$status|s$) AND ($owner|s$=\"__all__\" OR owner=$owner|s$)\n| stats count AS entries count(eval(status=\"In progress\")) AS in_progress count(eval(status=\"At risk\" OR status=\"Blocked\")) AS attention count(eval(duration=0 AND validation=\"OK\")) AS milestones"
       }
     },
     "ds_health": {
@@ -282,6 +320,7 @@
   },
   "layout": {
     "globalInputs": [
+      "input_project_category",
       "input_workstream",
       "input_status",
       "input_owner"

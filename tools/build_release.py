@@ -33,14 +33,14 @@ def main():
     query = (APP / 'src/base.spl').read_text()
     adapter = (APP / 'src/splunk_adapter.js').read_text()
     bootstrap = '''
-require(['splunkjs/mvc/searchmanager', 'splunk.util', 'splunkjs/mvc/simplexml/ready!'], function (SearchManager, util) {
+require(['splunkjs/mvc/searchmanager', 'splunk.util', 'jquery', 'splunkjs/mvc/simplexml/ready!'], function (SearchManager, util, $) {
     var host = document.getElementById('cdp-schedule-root');
     if (!host) return;
     try {
         var load = CDPScheduleAdapter.createLoadData(SearchManager, __QUERY__);
         var editor = util.make_url('/app/lookup_editor/lookup_edit') + '?namespace=cdp_roadmap&lookup=cdp_roadmap.csv&type=csv&owner=nobody';
         host.textContent = '';
-        CDPSchedule.mount(host, {loadData: load, editorUrl: editor});
+        CDPSchedule.mount(host, {loadData: load, editorUrl: editor, checkEditor: function () { return CDPScheduleAdapter.checkLookupEditor($, util); }});
         window.addEventListener('beforeunload', load.cancel);
     } catch (error) {
         host.textContent = 'CDP Program Management could not initialize.';
@@ -63,7 +63,7 @@ require(['splunkjs/mvc/searchmanager', 'splunk.util', 'splunkjs/mvc/simplexml/re
   <description>Projects, activities, ownership, and delivery status.</description>
   <row><panel id="cdp_schedule_panel"><html>
     <div id="cdp-schedule-root" aria-label="CDP Program Management">Loading…</div>
-    <noscript>JavaScript unavailable. <a href="studio_roadmap">Projects Scheulde</a></noscript>
+    <noscript>JavaScript unavailable. <a href="studio_roadmap">Project Schedule</a></noscript>
   </html></panel></row>
 </dashboard>
 ''')
@@ -75,6 +75,7 @@ require(['splunkjs/mvc/searchmanager', 'splunk.util', 'splunkjs/mvc/simplexml/re
             if path.is_symlink():
                 raise ValueError('Runtime symlink rejected: ' + str(path))
             if path.is_file():
+
                 # Retain old source assets for rollback, but ship only the current version.
                 if path.parent == static and path.name.startswith('cdp-schedule-') and path.name not in (stem + '.js', stem + '.css'):
                     continue

@@ -11,13 +11,13 @@ import * as theme from './theme.mjs';
 // Exercise actual JSX entirely in memory; no build output or browser fixture is written.
 const source = await readFile(new URL('./entry.jsx', import.meta.url), 'utf8');
 const css = await readFile(new URL('./style.css', import.meta.url), 'utf8');
-const compiled = await transform(`${source}\nexport {Overview, Roadmap, App};`, {loader: 'jsx', format: 'cjs', sourcefile: 'entry.jsx'});
+const compiled = await transform(`${source}\nexport {Overview, Roadmap, App, Filters, DetailDialog};`, {loader: 'jsx', format: 'cjs', sourcefile: 'entry.jsx'});
 assert.equal(compiled.warnings.length, 0);
 const localRequire = createRequire(import.meta.url);
 const mod = {exports: {}};
 const resolve = name => name === './style.css' ? css : name === './data.mjs' ? data : name === './theme.mjs' ? theme : localRequire(name);
 new Function('require', 'module', 'exports', compiled.code)(resolve, mod, mod.exports);
-const {Overview, Roadmap, App} = mod.exports;
+const {Overview, Roadmap, App, Filters, DetailDialog} = mod.exports;
 const props = {openEntry() {}, navigate() {}, filtered: false};
 const input = (overrides = {}) => ({id: 'test', milestone: '<img src=x onerror=alert(1)>', workstream: 'Work', owner: 'Owner', start_date: '2024-02-01', end_date: '2024-03-01', status: 'Planned', validation: 'OK', ...overrides});
 const render = (Component, values) => renderToStaticMarkup(React.createElement(Component, values));
@@ -71,7 +71,7 @@ test('timeline renders fiscal week axis and bounded accessible Today marker with
   assert.match(html, /aria-label="FY27-W01: Oct 1, 2026 to Oct 7, 2026"/);
   assert.match(html, /class="today-marker"/);
   assert.match(html, /aria-label="Today: Oct 1, 2026"/);
-  assert.doesNotMatch(html, /timeline-foot|<footer|automatic dependency scheduler|Read-only view of cdp_roadmap.csv|Designed for clarity|Author: G0TH3R/);
+  assert.doesNotMatch(html, /timeline-foot|<footer|automatic dependency scheduler|Read-only view of cdp_roadmap.csv|Designed for clarity|Author:/);
 });
 
 test('actual React handles empty views and never turns an initial load into seed data', () => {
@@ -89,11 +89,40 @@ test('requested branding and heading replace instructional UI, including old gui
     assert.equal(data.pageFromLocation(location), 'roadmap');
     const html = render(App, {loadData: async () => [], editorUrl: '/edit', view: {location}});
     assert.match(html, /CDP Program Management/);
-    assert.match(html, /Projects Scheulde/);
+    assert.match(html, /Project Schedule/);
     assert.doesNotMatch(html, /CDP Schedule|Project timeline|Editing guide|>Guide<|Maintain entries|Designed for clarity/);
     assert.match(html, /Color theme/);
   }
   assert.doesNotMatch(source, /function Guide|Click any activity|After saving there|Add the project column|not an automatic dependency scheduler/);
+});
+
+test('project categories appear in filters, register, timeline and read-only details', () => {
+  const model = data.prepareData([input({project: 'One', project_category: 'Automation & Analytics'}), input({id:'legacy',project:'Two'})]);
+  const filters = {project_category:'',project:'',workstream:'',status:'',owner:'',search:''};
+  const controls = render(Filters, {rows:model.rows,filters,setFilters(){},count:2});
+  assert.match(controls, /Filter project category/);
+  for (const label of ['Observability','Security','Infrastructure','Automation &amp; Analytics','OT\/ICS','Uncategorized']) assert.ok(controls.includes(label));
+  const overview = render(Overview, {...props,model,rows:model.rows});
+  const timeline = render(Roadmap, {...props,rows:model.rows,allRows:model.rows});
+  for (const html of [overview,timeline]) {
+    assert.match(html, /class="project-category">Automation &amp; Analytics/);
+    assert.match(html, /class="project-category">Uncategorized/);
+  }
+  assert.match(render(DetailDialog,{row:model.rows[0],onClose(){}}), /Project Category<\/dt><dd>Automation &amp; Analytics/);
+});
+
+test('unassigned timeline lane renders mixed categories and recomputes its filtered label', () => {
+  const model = data.prepareData([input({id: 'A', project_category: 'Security'}), input({id: 'B'})]);
+  const html = render(Roadmap, {...props, rows: model.rows, allRows: model.rows});
+  assert.match(html, /class="project-category">Mixed categories/);
+  for (const category of ['Security', '']) {
+    const rows = data.filterRows(model.rows, {project_category: JSON.stringify(category)});
+    const filtered = render(Roadmap, {...props, filtered: true, rows, allRows: model.rows});
+    assert.doesNotMatch(filtered, /Mixed categories/);
+    assert.ok(filtered.includes(`class="project-category">${category || 'Uncategorized'}`));
+  }
+  assert.match(render(DetailDialog, {row: model.rows[0], onClose(){}}), /Project Category<\/dt><dd>Security/);
+  assert.match(render(DetailDialog, {row: model.rows[1], onClose(){}}), /Project Category<\/dt><dd>Uncategorized/);
 });
 
 test('actual JSX and CSS parse without warnings', async () => {
